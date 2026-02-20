@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinesiology Match — Muscle Groups & Exercises</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-alt: #222633;
+    --border: #2e3347;
+    --text: #e8eaf0;
+    --text-muted: #8b90a5;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.3);
+    --correct: #00cec9;
+    --correct-glow: rgba(0, 206, 201, 0.25);
+    --incorrect: #ff6b6b;
+    --incorrect-glow: rgba(255, 107, 107, 0.25);
+    --gold: #ffd93d;
+    --radius: 14px;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,92,231,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,92,231,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* ---- HEADER ---- */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .header-badge .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .header h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+
+  .header h1 span {
+    background: linear-gradient(135deg, var(--accent), #a29bfe);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 16px;
+    font-weight: 300;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  /* ---- SCOREBOARD ---- */
+  .scoreboard {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 36px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-value.correct-val { color: var(--correct); }
+  .stat-value.incorrect-val { color: var(--incorrect); }
+
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ---- GAME AREA ---- */
+  .game-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  @media (max-width: 640px) {
+    .game-area {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+  }
+
+  .column-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  /* ---- MUSCLE CARDS (drop targets) ---- */
+  .muscle-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .muscle-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--accent);
+    opacity: 0.5;
+    border-radius: 4px 0 0 4px;
+    transition: opacity 0.3s;
+  }
+
+  .muscle-card.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 24px var(--accent-glow);
+    transform: scale(1.015);
+  }
+
+  .muscle-card.matched {
+    border-color: var(--correct);
+    background: rgba(0, 206, 201, 0.06);
+  }
+
+  .muscle-card.matched::before {
+    background: var(--correct);
+    opacity: 1;
+  }
+
+  .muscle-card.wrong {
+    border-color: var(--incorrect);
+    animation: shake 0.5s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .muscle-name {
+    font-weight: 700;
+    font-size: 17px;
+    margin-bottom: 2px;
+  }
+
+  .muscle-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  .drop-zone {
+    margin-top: 12px;
+    min-height: 44px;
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    transition: all 0.3s;
+  }
+
+  .muscle-card.drag-over .drop-zone {
+    border-color: var(--accent);
+    background: rgba(108, 92, 231, 0.08);
+    color: var(--accent);
+  }
+
+  .muscle-card.matched .drop-zone {
+    border-style: solid;
+    border-color: var(--correct);
+    background: rgba(0, 206, 201, 0.08);
+    color: var(--correct);
+    font-weight: 500;
+  }
+
+  /* ---- EXERCISE CHIPS (draggables) ---- */
+  .exercise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .exercise-chip {
+    background: var(--surface-alt);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: grab;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    position: relative;
+  }
+
+  .exercise-chip:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px var(--accent-glow);
+    transform: translateY(-2px);
+  }
+
+  .exercise-chip:active, .exercise-chip.dragging {
+    cursor: grabbing;
+    opacity: 0.6;
+    transform: scale(0.97);
+  }
+
+  .exercise-chip.matched-chip {
+    display: none;
+  }
+
+  .exercise-chip .grip {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    opacity: 0.4;
+  }
+
+  /* ---- RESULTS OVERLAY ---- */
+  .results-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 17, 23, 0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .results-overlay.show {
+    display: flex;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .results-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px;
+    text-align: center;
+    max-width: 440px;
+    width: 90%;
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+
+  .results-card h2 {
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+
+  .results-card .score-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    color: var(--correct);
+    margin-bottom: 8px;
+  }
+
+  .results-card .attempts-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 32px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .btn:hover {
+    background: #7c6ff0;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--accent-glow);
+  }
+
+  /* ---- CONFETTI ---- */
+  .confetti-piece {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    z-index: 200;
+    pointer-events: none;
+    animation: confettiFall 2.5s ease-out forwards;
+  }
+
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Match anim */
+  @keyframes matchPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+
+  .match-pop {
+    animation: matchPop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-badge"><span class="dot"></span> Interactive Activity</div>
+    <h1>Kinesiology <span>Match</span></h1>
+    <p>Drag each exercise to the primary muscle group it targets</p>
+  </div>
+
+  <div class="scoreboard">
+    <div class="stat">
+      <div class="stat-value" id="matchCount">0</div>
+      <div class="stat-label">Matched</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="totalCount">/ 8</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value correct-val" id="correctCount">0</div>
+      <div class="stat-label">Correct</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value incorrect-val" id="wrongCount">0</div>
+      <div class="stat-label">Mistakes</div>
+    </div>
+  </div>
+
+  <div class="game-area">
+    <div class="muscles-col">
+      <div class="column-header">↓ Muscle Groups</div>
+      <div id="muscleList"></div>
+    </div>
+    <div class="exercises-col">
+      <div class="column-header">↓ Drag Exercises</div>
+      <div id="exerciseList" class="exercise-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="results-overlay" id="resultsOverlay">
+  <div class="results-card">
+    <div class="results-icon" id="resultsIcon">🏆</div>
+    <h2 id="resultsTitle">Great Work!</h2>
+    <div class="score-text" id="resultsScore"></div>
+    <div class="attempts-text" id="resultsAttempts"></div>
+    <button class="btn" onclick="resetGame()">↻ Play Again</button>
+  </div>
+</div>
+
+<script>
+  // ---- DATA: Muscle Groups → Exercises ----
+  const DATA = [
+    {
+      muscle: 'Quadriceps',
+      hint: 'Front of the thigh',
+      exercise: 'Barbell Back Squat'
+    },
+    {
+      muscle: 'Hamstrings',
+      hint: 'Back of the thigh',
+      exercise: 'Romanian Deadlift'
+    },
+    {
+      muscle: 'Pectoralis Major',
+      hint: 'Chest',
+      exercise: 'Bench Press'
+    },
+    {
+      muscle: 'Latissimus Dorsi',
+      hint: 'Upper back (lats)',
+      exercise: 'Lat Pulldown'
+    },
+    {
+      muscle: 'Deltoids',
+      hint: 'Shoulders',
+      exercise: 'Overhead Press'
+    },
+    {
+      muscle: 'Biceps Brachii',
+      hint: 'Front of upper arm',
+      exercise: 'Dumbbell Curl'
+    },
+    {
+      muscle: 'Gluteus Maximus',
+      hint: 'Glutes',
+      exercise: 'Hip Thrust'
+    },
+    {
+      muscle: 'Rectus Abdominis',
+      hint: 'Core / abs',
+      exercise: 'Hanging Leg Raise'
+    }
+  ];
+
+  let matched = 0;
+  let correct = 0;
+  let wrong = 0;
+  let draggedExercise = null;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildGame() {
+    const muscleList = document.getElementById('muscleList');
+    const exerciseList = document.getElementById('exerciseList');
+    muscleList.innerHTML = '';
+    exerciseList.innerHTML = '';
+
+    // Shuffle muscles and exercises independently
+    const shuffledMuscles = shuffle(DATA);
+    const shuffledExercises = shuffle(DATA);
+
+    shuffledMuscles.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'muscle-card';
+      card.dataset.muscle = item.muscle;
+      card.innerHTML = `
+        <div class="muscle-name">${item.muscle}</div>
+        <div class="muscle-hint">${item.hint}</div>
+        <div class="drop-zone">Drop exercise here</div>
+      `;
+
+      // Drop events
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        card.classList.add('drag-over');
+      });
+
+      card.addEventListener('dragleave', () => {
+        card.classList.remove('drag-over');
+      });
+
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        handleDrop(card, draggedExercise);
+      });
+
+      // Touch support
+      card.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+      muscleList.appendChild(card);
+    });
+
+    shuffledExercises.forEach(item => {
+      const chip = document.createElement('div');
+      chip.className = 'exercise-chip';
+      chip.draggable = true;
+      chip.dataset.exercise = item.exercise;
+      chip.dataset.correctMuscle = item.muscle;
+      chip.innerHTML = `${item.exercise} <span class="grip">⠿</span>`;
+
+      chip.addEventListener('dragstart', e => {
+        draggedExercise = chip;
+        chip.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      chip.addEventListener('dragend', () => {
+        chip.classList.remove('dragging');
+        draggedExercise = null;
+      });
+
+      // Touch support
+      addTouchSupport(chip);
+
+      exerciseList.appendChild(chip);
+    });
+  }
+
+  function addTouchSupport(chip) {
+    let startX, startY, clone;
+
+    chip.addEventListener('touchstart', e => {
+      draggedExercise = chip;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+
+      clone = chip.cloneNode(true);
+      clone.style.position = 'fixed';
+      clone.style.zIndex = '999';
+      clone.style.pointerEvents = 'none';
+      clone.style.opacity = '0.85';
+      clone.style.width = chip.offsetWidth + 'px';
+      clone.style.transform = 'scale(1.05) rotate(2deg)';
+      document.body.appendChild(clone);
+      positionClone(touch);
+      chip.classList.add('dragging');
+    }, { passive: true });
+
+    chip.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      positionClone(touch);
+
+      // Highlight target
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      document.querySelectorAll('.muscle-card').forEach(c => c.classList.remove('drag-over'));
+      const card = el?.closest('.muscle-card');
+      if (card && !card.classList.contains('matched')) card.classList.add('drag-over');
+    }, { passive: false });
+
+    chip.addEventListener('touchend', e => {
+      if (clone) { clone.remove(); clone = null; }
+      chip.classList.remove('dragging');
+
+      const touch = e.changedTouches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const card = el?.closest('.muscle-card');
+      document.querySelectorAll('.muscle-card').forEach(c => c.classList.remove('drag-over'));
+
+      if (card && !card.classList.contains('matched')) {
+        handleDrop(card, draggedExercise);
+      }
+      draggedExercise = null;
+    });
+
+    function positionClone(touch) {
+      if (!clone) return;
+      clone.style.left = (touch.clientX - chip.offsetWidth / 2) + 'px';
+      clone.style.top = (touch.clientY - 30) + 'px';
+    }
+  }
+
+  function handleDrop(card, chip) {
+    if (!chip || card.classList.contains('matched')) return;
+
+    const targetMuscle = card.dataset.muscle;
+    const correctMuscle = chip.dataset.correctMuscle;
+
+    if (targetMuscle === correctMuscle) {
+      // Correct match
+      correct++;
+      matched++;
+      card.classList.add('matched', 'match-pop');
+      card.querySelector('.drop-zone').textContent = '✓ ' + chip.dataset.exercise;
+      chip.classList.add('matched-chip');
+      updateScore();
+
+      if (matched === DATA.length) {
+        setTimeout(showResults, 600);
+      }
+    } else {
+      // Wrong match
+      wrong++;
+      card.classList.add('wrong');
+      setTimeout(() => card.classList.remove('wrong'), 500);
+      updateScore();
+    }
+  }
+
+  function updateScore() {
+    document.getElementById('matchCount').textContent = matched;
+    document.getElementById('correctCount').textContent = correct;
+    document.getElementById('wrongCount').textContent = wrong;
+  }
+
+  function showResults() {
+    const overlay = document.getElementById('resultsOverlay');
+    const pct = Math.round((correct / (correct + wrong)) * 100);
+
+    if (wrong === 0) {
+      document.getElementById('resultsIcon').textContent = '🏆';
+      document.getElementById('resultsTitle').textContent = 'Perfect Score!';
+    } else if (wrong <= 2) {
+      document.getElementById('resultsIcon').textContent = '🎯';
+      document.getElementById('resultsTitle').textContent = 'Great Work!';
+    } else {
+      document.getElementById('resultsIcon').textContent = '💪';
+      document.getElementById('resultsTitle').textContent = 'Keep Practicing!';
+    }
+
+    document.getElementById('resultsScore').textContent = `${correct} / ${correct + wrong} attempts correct (${pct}%)`;
+    document.getElementById('resultsAttempts').textContent = `${wrong} mistake${wrong !== 1 ? 's' : ''} made`;
+
+    overlay.classList.add('show');
+    launchConfetti();
+  }
+
+  function launchConfetti() {
+    const colors = ['#6c5ce7', '#00cec9', '#ffd93d', '#a29bfe', '#ff6b6b', '#55efc4'];
+    for (let i = 0; i < 60; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.top = '-10px';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDelay = Math.random() * 1.2 + 's';
+      piece.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+      piece.style.width = (6 + Math.random() * 6) + 'px';
+      piece.style.height = (6 + Math.random() * 6) + 'px';
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), 4000);
+    }
+  }
+
+  function resetGame() {
+    matched = 0;
+    correct = 0;
+    wrong = 0;
+    updateScore();
+    document.getElementById('resultsOverlay').classList.remove('show');
+    buildGame();
+  }
+
+  // Init
+  buildGame();
+</script>
+
+</body>
+</html>
