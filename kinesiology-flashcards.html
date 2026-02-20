@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPTI — Kinesiology Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #0a0a0a;
+    --dark: #141414;
+    --surface: #1c1c1c;
+    --surface-hover: #252525;
+    --border: #2a2a2a;
+    --red: #c8102e;
+    --red-dark: #a00d24;
+    --red-glow: rgba(200, 16, 46, 0.25);
+    --red-subtle: rgba(200, 16, 46, 0.08);
+    --white: #ffffff;
+    --gray-100: #f0f0f0;
+    --gray-300: #a0a0a0;
+    --gray-500: #666666;
+    --gray-700: #333333;
+    --correct: #22c55e;
+    --correct-glow: rgba(34, 197, 94, 0.2);
+    --incorrect: #ef4444;
+    --radius: 16px;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--black);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Diagonal stripe texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 40px,
+      rgba(200, 16, 46, 0.015) 40px,
+      rgba(200, 16, 46, 0.015) 41px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ---- HEADER ---- */
+  .header {
+    text-align: center;
+    margin-bottom: 44px;
+  }
+
+  .fpti-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 20px;
+  }
+
+  .fpti-logo .logo-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 6px;
+    color: var(--white);
+  }
+
+  .fpti-logo .logo-accent {
+    width: 32px;
+    height: 3px;
+    background: var(--red);
+    margin-left: 4px;
+    margin-top: 2px;
+  }
+
+  .header-sub {
+    font-family: 'Outfit', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--gray-500);
+    margin-bottom: 24px;
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 7vw, 56px);
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .header h1 .highlight {
+    color: var(--red);
+  }
+
+  .header p {
+    color: var(--gray-300);
+    font-size: 15px;
+    font-weight: 300;
+  }
+
+  /* ---- PROGRESS BAR ---- */
+  .progress-section {
+    margin-bottom: 36px;
+  }
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .progress-count {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+
+  .progress-count .current { color: var(--red); }
+
+  .progress-stats {
+    display: flex;
+    gap: 20px;
+  }
+
+  .progress-stats .stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .stat-dot.known { background: var(--correct); }
+  .stat-dot.learning { background: var(--red); }
+
+  .progress-bar-track {
+    width: 100%;
+    height: 4px;
+    background: var(--surface);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red), #e8243c);
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  /* ---- FLASHCARD ---- */
+  .card-container {
+    perspective: 1200px;
+    margin-bottom: 32px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .card-inner {
+    position: relative;
+    width: 100%;
+    min-height: 340px;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+
+  .card-inner.flipped {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 36px;
+    text-align: center;
+  }
+
+  /* FRONT */
+  .card-front {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+  }
+
+  .card-front::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--red);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .card-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--red);
+    margin-bottom: 24px;
+    font-weight: 600;
+  }
+
+  .card-term {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 5vw, 40px);
+    letter-spacing: 2px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .card-category {
+    font-size: 13px;
+    color: var(--gray-500);
+    font-weight: 400;
+    padding: 6px 16px;
+    background: var(--red-subtle);
+    border-radius: 100px;
+    border: 1px solid rgba(200, 16, 46, 0.15);
+  }
+
+  .flip-hint {
+    position: absolute;
+    bottom: 20px;
+    font-size: 12px;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.7;
+  }
+
+  .flip-hint .icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--gray-500);
+    border-radius: 4px;
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  /* BACK */
+  .card-back {
+    background: var(--dark);
+    border: 1.5px solid var(--red);
+    transform: rotateY(180deg);
+    box-shadow: 0 0 40px var(--red-glow);
+  }
+
+  .card-back .card-label {
+    color: var(--gray-300);
+  }
+
+  .card-definition {
+    font-size: 17px;
+    line-height: 1.7;
+    font-weight: 300;
+    color: var(--gray-100);
+    max-width: 460px;
+  }
+
+  .card-example {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--gray-300);
+    font-style: italic;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .card-example strong {
+    color: var(--red);
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  /* ---- RATING BUTTONS ---- */
+  .rating-section {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .rate-btn {
+    flex: 1;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--white);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .rate-btn .emoji {
+    font-size: 22px;
+  }
+
+  .rate-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .rate-btn.learning-btn:hover {
+    border-color: var(--red);
+    box-shadow: 0 4px 20px var(--red-glow);
+    background: var(--red-subtle);
+  }
+
+  .rate-btn.known-btn:hover {
+    border-color: var(--correct);
+    box-shadow: 0 4px 20px var(--correct-glow);
+    background: rgba(34, 197, 94, 0.06);
+  }
+
+  .rate-btn .shortcut {
+    font-size: 10px;
+    color: var(--gray-500);
+    font-weight: 400;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ---- NAVIGATION ---- */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--gray-300);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .nav-btn:hover {
+    border-color: var(--gray-500);
+    color: var(--white);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+
+  .shuffle-btn {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--gray-300);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .shuffle-btn:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* ---- RESULTS ---- */
+  .results-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(16px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .results-overlay.show {
+    display: flex;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .results-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 52px 48px;
+    text-align: center;
+    max-width: 460px;
+    width: 90%;
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-card .fpti-logo {
+    margin-bottom: 24px;
+  }
+
+  .results-card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+
+  .results-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 32px;
+  }
+
+  .results-stat {
+    text-align: center;
+  }
+
+  .results-stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    letter-spacing: 2px;
+  }
+
+  .results-stat-val.green { color: var(--correct); }
+  .results-stat-val.red { color: var(--red); }
+
+  .results-stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+
+  .results-msg {
+    font-size: 15px;
+    color: var(--gray-300);
+    font-weight: 300;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .results-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    padding: 14px 32px;
+    border-radius: 10px;
+    border: none;
+    background: var(--red);
+    color: var(--white);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .btn-primary:hover {
+    background: var(--red-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--red-glow);
+  }
+
+  .btn-secondary {
+    padding: 14px 32px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--gray-300);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--gray-500);
+    color: var(--white);
+  }
+
+  /* ---- CARD ENTRANCE ---- */
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .card-enter {
+    animation: cardIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 500px) {
+    .card-face { padding: 32px 24px; }
+    .results-card { padding: 36px 24px; }
+    .rating-section { gap: 8px; }
+    .rate-btn { padding: 14px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="fpti-logo">
+      <span class="logo-text">FPTI</span>
+      <span class="logo-accent"></span>
+    </div>
+    <div class="header-sub">Focus Personal Training Institute</div>
+    <h1>KINESIOLOGY <span class="highlight">FLASHCARDS</span></h1>
+    <p>Tap a card to flip it. Rate yourself to track progress.</p>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section">
+    <div class="progress-info">
+      <div class="progress-count">
+        <span class="current" id="currentNum">1</span> / <span id="totalNum">16</span>
+      </div>
+      <div class="progress-stats">
+        <div class="stat"><span class="stat-dot known"></span> <span id="knownCount">0</span> Known</div>
+        <div class="stat"><span class="stat-dot learning"></span> <span id="learningCount">0</span> Learning</div>
+      </div>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- FLASHCARD -->
+  <div class="card-container" id="cardContainer" onclick="flipCard()">
+    <div class="card-inner" id="cardInner">
+      <div class="card-face card-front">
+        <div class="card-label" id="cardCategory">Muscle Group</div>
+        <div class="card-term" id="cardTerm">Quadriceps</div>
+        <div class="card-category" id="cardTag">Lower Body</div>
+        <div class="flip-hint"><span class="icon">↻</span> Tap to flip</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">Definition</div>
+        <div class="card-definition" id="cardDefinition"></div>
+        <div class="card-example" id="cardExample"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RATING -->
+  <div class="rating-section">
+    <button class="rate-btn learning-btn" onclick="rateCard('learning')">
+      <span class="emoji">🔄</span>
+      Still Learning
+      <span class="shortcut">Press 1</span>
+    </button>
+    <button class="rate-btn known-btn" onclick="rateCard('known')">
+      <span class="emoji">✓</span>
+      Got It
+      <span class="shortcut">Press 2</span>
+    </button>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav-row">
+    <button class="nav-btn" id="prevBtn" onclick="prevCard()" disabled>← Prev</button>
+    <button class="shuffle-btn" onclick="shuffleDeck()">⟳ Shuffle</button>
+    <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next →</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="results-overlay" id="resultsOverlay">
+  <div class="results-card">
+    <div class="fpti-logo">
+      <span class="logo-text">FPTI</span>
+      <span class="logo-accent"></span>
+    </div>
+    <h2>SESSION <span style="color:var(--red)">COMPLETE</span></h2>
+    <div class="results-stats">
+      <div class="results-stat">
+        <div class="results-stat-val green" id="resultsKnown">0</div>
+        <div class="results-stat-label">Known</div>
+      </div>
+      <div class="results-stat">
+        <div class="results-stat-val red" id="resultsLearning">0</div>
+        <div class="results-stat-label">Learning</div>
+      </div>
+    </div>
+    <div class="results-msg" id="resultsMsg"></div>
+    <div class="results-btns">
+      <button class="btn-secondary" onclick="reviewLearning()">Review Learning Cards</button>
+      <button class="btn-primary" onclick="resetAll()">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- FLASHCARD DATA ----
+  const CARDS = [
+    {
+      term: 'Quadriceps',
+      category: 'Muscle Group',
+      tag: 'Lower Body',
+      definition: 'A group of four muscles on the front of the thigh (rectus femoris, vastus lateralis, vastus medialis, vastus intermedius) responsible for knee extension.',
+      example: '<strong>Key exercise:</strong> Barbell Back Squat — emphasizes knee extension through a full range of motion.'
+    },
+    {
+      term: 'Hamstrings',
+      category: 'Muscle Group',
+      tag: 'Lower Body',
+      definition: 'A group of three muscles on the posterior thigh (biceps femoris, semitendinosus, semimembranosus) that flex the knee and extend the hip.',
+      example: '<strong>Key exercise:</strong> Romanian Deadlift — targets hip extension with an eccentric hamstring emphasis.'
+    },
+    {
+      term: 'Gluteus Maximus',
+      category: 'Muscle Group',
+      tag: 'Lower Body',
+      definition: 'The largest and most superficial gluteal muscle. Primary functions include hip extension, external rotation, and abduction of the thigh.',
+      example: '<strong>Key exercise:</strong> Hip Thrust — isolates hip extension for maximal glute activation.'
+    },
+    {
+      term: 'Pectoralis Major',
+      category: 'Muscle Group',
+      tag: 'Upper Body',
+      definition: 'A large, fan-shaped chest muscle with two heads (clavicular and sternal) that performs shoulder flexion, adduction, and internal rotation.',
+      example: '<strong>Key exercise:</strong> Bench Press — horizontal pushing movement targeting both pec heads.'
+    },
+    {
+      term: 'Latissimus Dorsi',
+      category: 'Muscle Group',
+      tag: 'Upper Body',
+      definition: 'A broad, flat muscle of the back responsible for shoulder extension, adduction, and internal rotation. Often called the "lats."',
+      example: '<strong>Key exercise:</strong> Lat Pulldown — vertical pull that targets shoulder adduction and extension.'
+    },
+    {
+      term: 'Deltoids',
+      category: 'Muscle Group',
+      tag: 'Upper Body',
+      definition: 'A three-part shoulder muscle (anterior, lateral, posterior) that abducts the arm and assists in flexion, extension, and rotation of the shoulder.',
+      example: '<strong>Key exercise:</strong> Overhead Press — targets anterior and lateral deltoid heads through shoulder abduction and flexion.'
+    },
+    {
+      term: 'Rectus Abdominis',
+      category: 'Muscle Group',
+      tag: 'Core',
+      definition: 'The "six-pack" muscle running vertically along the front of the abdomen. Primary function is spinal flexion; also resists extension (anti-extension).',
+      example: '<strong>Key exercise:</strong> Hanging Leg Raise — trains spinal flexion under load with hip flexor involvement.'
+    },
+    {
+      term: 'Erector Spinae',
+      category: 'Muscle Group',
+      tag: 'Core / Posterior Chain',
+      definition: 'A group of muscles and tendons that run along the spine from the sacrum to the skull. Responsible for spinal extension and maintaining upright posture.',
+      example: '<strong>Key exercise:</strong> Back Extension — directly targets spinal extension against gravity.'
+    },
+    {
+      term: 'Sagittal Plane',
+      category: 'Plane of Motion',
+      tag: 'Movement Science',
+      definition: 'Divides the body into left and right halves. Movements in this plane include flexion and extension (e.g., bicep curls, squats, running).',
+      example: '<strong>Example:</strong> A forward lunge moves primarily through the sagittal plane.'
+    },
+    {
+      term: 'Frontal Plane',
+      category: 'Plane of Motion',
+      tag: 'Movement Science',
+      definition: 'Divides the body into front and back halves. Movements include abduction, adduction, lateral flexion, and eversion/inversion.',
+      example: '<strong>Example:</strong> Lateral raises and side lunges occur in the frontal plane.'
+    },
+    {
+      term: 'Transverse Plane',
+      category: 'Plane of Motion',
+      tag: 'Movement Science',
+      definition: 'Divides the body into upper and lower halves. Movements include rotation, horizontal abduction/adduction, supination, and pronation.',
+      example: '<strong>Example:</strong> A cable woodchop with trunk rotation moves through the transverse plane.'
+    },
+    {
+      term: 'Concentric Contraction',
+      category: 'Muscle Action',
+      tag: 'Exercise Science',
+      definition: 'A muscle contraction where the muscle shortens as it generates force. This is the "lifting" or positive phase of an exercise.',
+      example: '<strong>Example:</strong> The upward phase of a bicep curl, where the biceps shorten to flex the elbow.'
+    },
+    {
+      term: 'Eccentric Contraction',
+      category: 'Muscle Action',
+      tag: 'Exercise Science',
+      definition: 'A muscle contraction where the muscle lengthens under tension. This is the "lowering" or negative phase. Eccentric training produces greater force than concentric.',
+      example: '<strong>Example:</strong> Slowly lowering a dumbbell during a bicep curl — the biceps lengthen while still under load.'
+    },
+    {
+      term: 'Isometric Contraction',
+      category: 'Muscle Action',
+      tag: 'Exercise Science',
+      definition: 'A muscle contraction where the muscle generates force without changing length. No visible joint movement occurs.',
+      example: '<strong>Example:</strong> Holding a plank — the core muscles contract without shortening or lengthening.'
+    },
+    {
+      term: 'Agonist',
+      category: 'Muscle Role',
+      tag: 'Functional Anatomy',
+      definition: 'The primary muscle responsible for producing a specific movement. Also called the "prime mover." It contracts concentrically to create the desired motion.',
+      example: '<strong>Example:</strong> The biceps brachii is the agonist during elbow flexion (bicep curl).'
+    },
+    {
+      term: 'Antagonist',
+      category: 'Muscle Role',
+      tag: 'Functional Anatomy',
+      definition: 'The muscle that opposes the agonist. It must relax or lengthen to allow the primary movement to occur. Provides eccentric braking.',
+      example: '<strong>Example:</strong> The triceps are the antagonist during a bicep curl — they lengthen as the biceps shorten.'
+    }
+  ];
+
+  let deck = [...CARDS];
+  let currentIndex = 0;
+  let ratings = {};
+  let reviewed = 0;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function renderCard() {
+    const card = deck[currentIndex];
+    const inner = document.getElementById('cardInner');
+    inner.classList.remove('flipped');
+
+    // Small delay so unflip completes before content swap
+    setTimeout(() => {
+      document.getElementById('cardCategory').textContent = card.category;
+      document.getElementById('cardTerm').textContent = card.term;
+      document.getElementById('cardTag').textContent = card.tag;
+      document.getElementById('cardDefinition').textContent = card.definition;
+      document.getElementById('cardExample').innerHTML = card.example;
+
+      document.getElementById('currentNum').textContent = currentIndex + 1;
+      document.getElementById('prevBtn').disabled = currentIndex === 0;
+
+      // Entrance animation
+      const container = document.getElementById('cardContainer');
+      container.classList.remove('card-enter');
+      void container.offsetWidth;
+      container.classList.add('card-enter');
+    }, inner.classList.contains('flipped') ? 300 : 50);
+
+    updateProgress();
+  }
+
+  function flipCard() {
+    document.getElementById('cardInner').classList.toggle('flipped');
+  }
+
+  function rateCard(rating) {
+    const card = deck[currentIndex];
+    const key = card.term;
+
+    if (!ratings[key]) reviewed++;
+    ratings[key] = rating;
+
+    updateProgress();
+
+    // Auto-advance
+    if (currentIndex < deck.length - 1) {
+      currentIndex++;
+      renderCard();
+    } else {
+      showResults();
+    }
+  }
+
+  function nextCard() {
+    if (currentIndex < deck.length - 1) {
+      currentIndex++;
+      renderCard();
+    }
+  }
+
+  function prevCard() {
+    if (currentIndex > 0) {
+      currentIndex--;
+      renderCard();
+    }
+  }
+
+  function shuffleDeck() {
+    shuffle(deck);
+    currentIndex = 0;
+    renderCard();
+  }
+
+  function updateProgress() {
+    const known = Object.values(ratings).filter(r => r === 'known').length;
+    const learning = Object.values(ratings).filter(r => r === 'learning').length;
+
+    document.getElementById('knownCount').textContent = known;
+    document.getElementById('learningCount').textContent = learning;
+
+    const pct = (reviewed / deck.length) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+  }
+
+  function showResults() {
+    const known = Object.values(ratings).filter(r => r === 'known').length;
+    const learning = Object.values(ratings).filter(r => r === 'learning').length;
+    const total = deck.length;
+    const pct = Math.round((known / total) * 100);
+
+    document.getElementById('resultsKnown').textContent = known;
+    document.getElementById('resultsLearning').textContent = learning;
+
+    let msg = '';
+    if (pct === 100) {
+      msg = 'Perfect score! You\'ve mastered all the cards in this deck. Keep reinforcing to lock it in.';
+    } else if (pct >= 70) {
+      msg = 'Strong session. Review the cards you\'re still learning and you\'ll have this locked down.';
+    } else {
+      msg = 'Good start. Focus on the cards marked "Learning" and run through the deck again.';
+    }
+    document.getElementById('resultsMsg').textContent = msg;
+
+    document.getElementById('resultsOverlay').classList.add('show');
+  }
+
+  function reviewLearning() {
+    const learningCards = deck.filter(c => ratings[c.term] === 'learning');
+    if (learningCards.length === 0) {
+      resetAll();
+      return;
+    }
+    deck = learningCards;
+    currentIndex = 0;
+    reviewed = 0;
+    ratings = {};
+    document.getElementById('totalNum').textContent = deck.length;
+    document.getElementById('resultsOverlay').classList.remove('show');
+    updateProgress();
+    renderCard();
+  }
+
+  function resetAll() {
+    deck = [...CARDS];
+    shuffle(deck);
+    currentIndex = 0;
+    reviewed = 0;
+    ratings = {};
+    document.getElementById('totalNum').textContent = deck.length;
+    document.getElementById('resultsOverlay').classList.remove('show');
+    updateProgress();
+    renderCard();
+  }
+
+  // Keyboard support
+  document.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+    if (e.key === '1') rateCard('learning');
+    if (e.key === '2') rateCard('known');
+    if (e.key === 'ArrowRight') nextCard();
+    if (e.key === 'ArrowLeft') prevCard();
+  });
+
+  // Init
+  shuffle(deck);
+  renderCard();
+</script>
+
+</body>
+</html>
